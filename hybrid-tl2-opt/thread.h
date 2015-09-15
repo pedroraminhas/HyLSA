@@ -1,7 +1,25 @@
 #ifndef THREAD_H
 #define THREAD_H 1
 
+#include <pthread.h>
+#include <stdlib.h>
+#include "types.h"
+
+#include <immintrin.h>
+#include <rtmintrin.h>
+
+#include "stm_tl2.h"
+#include "tl2.h"
+
+
 # define CACHE_LINE_SIZE 64
+
+extern __thread vwLock next_commit;
+
+typedef struct padded_scalar {
+    volatile unsigned long counter;
+    char suffixPadding[CACHE_LINE_SIZE];
+} __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t;
 
 typedef struct padded_statistics {
     unsigned long commits;
@@ -11,17 +29,15 @@ typedef struct padded_statistics {
 
 extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t statistics_array[];
 
-extern __thread unsigned short thread_id;
+extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t fallback_in_use;
 
 #ifndef REDUCED_TM_API
 
-#include <pthread.h>
-#include <stdlib.h>
-#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #define THREAD_T                            pthread_t
 #define THREAD_ATTR_T                       pthread_attr_t
@@ -39,7 +55,7 @@ extern "C" {
 #define THREAD_LOCAL_GET(key)               pthread_getspecific(key)
 
 #define THREAD_MUTEX_T                      pthread_mutex_t
-#define THREAD_MUTEX_INIT(lock)             pthread_mutex_init(&(lock), NULL)
+#define THREAD_MUTEX_INIT(lock)             pthread_spin_init(&(lock), NULL)
 #define THREAD_MUTEX_LOCK(lock)             pthread_mutex_lock(&(lock))
 #define THREAD_MUTEX_UNLOCK(lock)           pthread_mutex_unlock(&(lock))
 
@@ -54,6 +70,8 @@ extern "C" {
 #  define THREAD_BARRIER_INIT(bar, N)       barrier_init(bar, N)
 #  define THREAD_BARRIER(bar, tid)          barrier_cross(bar)
 #  define THREAD_BARRIER_FREE(bar)          barrier_free(bar)
+
+
 
 typedef struct barrier {
     pthread_cond_t complete;
@@ -83,11 +101,11 @@ long thread_getId();
 long thread_getNumThread();
 
 
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
 
 #endif /* THREAD_H */
