@@ -1,0 +1,4 @@
+CFLAGS   += -w $(HTM_RETRIES) $(RETRY_POLICY)
+CPPFLAGS := $(CFLAGS)
+LIBS     += $(CPPFLAGS)  -I ../lib/ -L$(STM) -ltl2 -I../../../rapl-power -L../../../rapl-power -ltcmalloc  -lpthread -lrt -lrapl -I$(STM)
+LDFLAGS  += $(LIBS)
