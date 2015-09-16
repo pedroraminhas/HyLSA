@@ -80,10 +80,11 @@
 
 #    define TM_BEGIN_EXT(b,mode,ro) { \
         unsigned int counter_stm_executions = 0; \
-		int tries = HTM_RETRIES;	\
+		int tries = HTM_RETRIES;\
+        orecs* o_set = P_MALLOC(orecs);
 		while (1) {	\
 			if (tries > 0) { \
-				while (fallback_in_use.counter != 0) { __asm__ ( "pause;" ); } \
+			//while (fallback_in_use.counter != 0) { __asm__ ( "pause;" ); }
 				unsigned int status = _xbegin();	\
 				if (status == _XBEGIN_STARTED) { \
 					if (fallback_in_use.counter != 0) { _xabort(0xab); } \
@@ -135,9 +136,19 @@
 #      define SLOW_PATH_FREE(ptr)
 
 # define FAST_PATH_RESTART() _xabort(0xab);
-# define FAST_PATH_SHARED_READ(var) (var)
-# define FAST_PATH_SHARED_READ_P(var) (var)
-# define FAST_PATH_SHARED_READ_D(var) (var)
+# define FAST_PATH_SHARED_READ(var) ({     //define the orec          ;
+                                    if (orec.locked == true) { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                    var;})
+
+
+
+# define FAST_PATH_SHARED_READ_P(var) ({     //define the orec          ;
+                                            if (orec.locked == true) { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                            var;})
+# define FAST_PATH_SHARED_READ_D(var) ({     //define the orec          ;
+                                            if (orec.locked == true) { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                            var;})
+
 # define FAST_PATH_SHARED_WRITE(var, val) ({HTM_WRITE((vintp*)(void*)&(var), (intptr_t)val, next_commit); var = val; var;})
 # define FAST_PATH_SHARED_WRITE_P(var, val) ({HTM_WRITE((vintp*)(void*)&(var), VP2IP(val), next_commit); var = val; var;})
 # define FAST_PATH_SHARED_WRITE_D(var, val) ({HTM_WRITE((vintp*)DP2IPP(&(var)), D2IP(val), next_commit); var = val; var;})
