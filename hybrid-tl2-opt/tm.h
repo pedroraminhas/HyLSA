@@ -81,13 +81,11 @@
 #    define TM_BEGIN_EXT(b,mode,ro) { \
         unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
-        orecs* o_set = P_MALLOC(orecs);
-		while (1) {	\
+        orecs* o_set = null;     //MALLOC_ORECS_STRUCT(o_set);
+		while (1) {
 			if (tries > 0) { \
-			//while (fallback_in_use.counter != 0) { __asm__ ( "pause;" ); }
 				unsigned int status = _xbegin();	\
-				if (status == _XBEGIN_STARTED) { \
-					if (fallback_in_use.counter != 0) { _xabort(0xab); } \
+				if (status == _XBEGIN_STARTED) { \} \
                     if (ro == 0) { next_commit = NEXT_CLOCK(); } \
 					break;	\
 				} \
@@ -107,25 +105,38 @@
 	}
 
 
-#    define TM_END()		\
-		if (tries > 0) {	\
-			_xend();	\
-		} else {	\
-			__sync_add_and_fetch(&fallback_in_use.counter,1);    \
-			int ret = HYBRID_STM_END();  \
-			__sync_sub_and_fetch(&fallback_in_use.counter,1);    \
-			if (ret == 0) { \
-				STM_RESTART(); \
-			} \
-			AFTER_COMMIT(); \
-			statistics_array[SPECIAL_THREAD_ID()].aborts--; \
-		} \
-		statistics_array[SPECIAL_THREAD_ID()].commits++; \
+#    define TM_END()    {    \
+        orecs* ptr = o_set;
+        orecs* endPtr = o_set + sizeof(o_set)/sizeof(o_set[0]);
+        int commit_timestamp = 0;
+        if ((tries > 0) ) {    \
+            if(o_set != null){          //Warning
+                commit_timestamp = __sync_add_and_fetch(&next_commit,1);
+                while ( ptr < endPtr ){
+                    ptr.locked = false;
+                    ptr.version = commit_timestamp;
+                    ptr.owner = 0 ; //Ask shady what to put in the ID
+                    ptr++;
+                }  }    \
+            _xend();\
+        } else {    \
+           commit_timestamp =  __sync_add_and_fetch(&next_commit,1);    \
+            int ret = HYBRID_STM_END();  \
+            commit_timestamp = __sync_sub_and_fetch(&next_commit,1);    \
+            if (ret == 0) { \
+                STM_RESTART(); \
+            } \
+            AFTER_COMMIT(); \
+            statistics_array[SPECIAL_THREAD_ID()].aborts--; \
+        } \
+        statistics_array[SPECIAL_THREAD_ID()].commits++; \
+}
 };
 
 
 #    define TM_EARLY_RELEASE(var)         
 
+#      define MALLOC_ORECS_STRUCT(ptr)      ({ptr = malloc(sizeof(orecs));})
 #      define P_MALLOC(size)            malloc(size)
 #      define P_FREE(ptr)               free(ptr)
 #      define SEQ_MALLOC(size)          malloc(size)
@@ -150,7 +161,13 @@
                                             var;})
 
 # define FAST_PATH_SHARED_WRITE(var, val) ({HTM_WRITE((vintp*)(void*)&(var), (intptr_t)val, next_commit); var = val; var;})
-# define FAST_PATH_SHARED_WRITE_P(var, val) ({HTM_WRITE((vintp*)(void*)&(var), VP2IP(val), next_commit); var = val; var;})
+# define FAST_PATH_SHARED_WRITE_P(var, val) ({/*define the orec*/;
+                                                if (orec.locked == true)  { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                                HTM_WRITE((vintp*)(void*)&(var), VP2IP(var), next_commit); /* PREFETCHW */
+                                                HTM_WRITE((vintp*)(void*)&(var), VP2IP(val), next_commit);
+                                                var = val;
+                                                var;
+                                                /*add the orec to the o-set*/})
 # define FAST_PATH_SHARED_WRITE_D(var, val) ({HTM_WRITE((vintp*)DP2IPP(&(var)), D2IP(val), next_commit); var = val; var;})
 
 # define SLOW_PATH_RESTART() STM_RESTART();

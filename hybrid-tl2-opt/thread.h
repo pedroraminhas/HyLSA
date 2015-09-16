@@ -32,6 +32,8 @@ extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t statistics_
 
 extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t orecs;
 
+
+
 #ifndef REDUCED_TM_API
 
 
