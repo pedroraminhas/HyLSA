@@ -30,7 +30,7 @@ typedef struct padded_statistics {
 
 extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t statistics_array[];
 
-extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t orecs;
+extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t orec;
 
 
 
