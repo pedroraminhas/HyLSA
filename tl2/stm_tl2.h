@@ -20,13 +20,14 @@
 #include "tl2.h"
 #include "util.h"
 
-
+//Read-Set structure
 typedef struct read_set {
     unsigned long address;
     unsigned long val;
     unsigned long version;
 } __attribute__((aligned(CACHE_LINE_SIZE))) read_set_t;
 
+//Write-set structure
 typedef struct write_set {
     unsigned long address;
     unsigned long val;
@@ -44,28 +45,46 @@ extern __attribute__((aligned(CACHE_LINE_SIZE))) orec* orecs; //TO DO
 
 
 
-// #  define malloc(size)                  tmalloc_reserve_tl2(size)
-// #  define calloc(n, size)               tm_calloc(n, size)
-// #  define realloc(ptr, size)            tmalloc_reserve_tl2Again(ptr, size)
-// #  define free(ptr)                     tmalloc_release(ptr)
-
 #  include <setjmp.h>
 #  define STM_JMPBUF_T                  sigjmp_buf
 #  define STM_JMPBUF                    buf
 
+//Operations to the Orecs
 # define FETCH_OREC (addr)            ({     orec* ptr = orecs;
                                              ptr = ptr + addr;
                                              ptr; }  )
+//Operations to the Write-set
 
-# define IS_IN_WRITE_SET(var, val, version) ({  write_set_t* ptr= write_set;
+# define IS_IN_WRITE_SET(var) ({  write_set_t* ptr= write_set;
                                                 write_set_t* endPtr = write_set + sizeof(write_set)/sizeof(write-set[0]);
                                                 while ( ptr < endPtr ){
-                                                      if((ptr.address == var) && (ptr.value == val))
+                                                      if(ptr.address == var) 
                                                         1;
                                                         ptr++;
                                                     } 
                                                     0;
                                                 })
+# define GET_VALUE_IN_WRITE_SET(var, val) ({  write_set_t* ptr = write-set;
+                                                write_set_t* endPtr = write_set + sizeof(write_set)/sizeof(write-set[0]);
+                                                while (ptr < endPtr) {
+                                                    if (ptr.address == var)
+                                                        ptr.val;
+                                                  }
+                                                })
+
+//Validate operation
+# define validate(read-set) ({read_set_t* read_set_beginPtr = read-set;
+                              read_set_t* read_set_endPr = read_set + sizeof(read_set)/sizeof(read-set[0]);
+                              while (read_set_beginPtr < read_set_endPr) {
+                                addr = read_set_beginPtr.address;
+                                version = read_set_beginPtr.ver;
+                                orec* orec = FETCH_OREC(addr);
+                                if ((orec.locked && (orec.owner != 0 /*TODO*/)) || (!orec.locked && (orec.version != version)))
+                                    { _xabort(0xab); 0}
+                                    read_set_beginPtr++;
+                              }
+            1;
+    })
 
 #define STM_VALID()                     (1)
 #define STM_RESTART()                   TxAbort(STM_SELF)
@@ -111,13 +130,18 @@ typedef volatile intptr_t               vintp;
 #define HYBRID_WRITE(var, val)		TxStore(STM_SELF, var, val)
 
 #define STM_READ(var)                  ({ orec* fetched_orec = FETCH_OREC(var);
-                                          unsigned long val = var; //Warning see if it gives the correct value
+                                          unsigned long val = 0; 
 
-                                          if(fetched_orec.locked)
+                                          if(fetched_orec.locked){
                                             if(fetched_orec.owner != /*another thread*/)
                                                 { _xabort(0xab);} //orec owned by other sw transaction
-                                            if(IS_IN_WRITE_SET(var,/*new val*/,7)) //TO DO ask Shady what is the new-value
+                                            if(IS_IN_WRITE_SET(var))
+                                              val = GET_VALUE_IN_WRITE_SET(var);
+                                            }else{
+                                                if(fetched_orec.version > upperBound)
+                                                    upperBound = clock;
 
+                                            }
 
                                         }) TxLoad(STM_SELF, (vintp*)(void*)&(var))
 
