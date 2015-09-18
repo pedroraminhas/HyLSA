@@ -73,7 +73,7 @@ extern __attribute__((aligned(CACHE_LINE_SIZE))) orec* orecs; //TO DO
                                                 })
 
 //Validate operation
-# define validate(read-set) ({read_set_t* read_set_beginPtr = read-set;
+# define VALIDATE(read-set) ({read_set_t* read_set_beginPtr = read-set;
                               read_set_t* read_set_endPr = read_set + sizeof(read_set)/sizeof(read-set[0]);
                               while (read_set_beginPtr < read_set_endPr) {
                                 addr = read_set_beginPtr.address;
@@ -140,7 +140,14 @@ typedef volatile intptr_t               vintp;
                                             }else{
                                                 if(fetched_orec.version > upperBound)
                                                     upperBound = clock;
-
+                                                if (!VALIDATE(read_set))
+                                                    { _xabort(0xab);}
+                                                val = var;
+                                                read_set_t* new_read_set_tuple = malloc(sizeof(read_set_t));
+                                                new_read_set_tuple.address = var;
+                                                new_read_set_tuple.val = val;
+                                                new_read_set_tuple.version = fetched_orec.version;
+                                                val;
                                             }
 
                                         }) TxLoad(STM_SELF, (vintp*)(void*)&(var))
