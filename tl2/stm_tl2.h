@@ -155,7 +155,26 @@ extern __attribute__((aligned(CACHE_LINE_SIZE))) orec* orecs; //TO DO
 
 #define STM_BEGIN_RD()                  STM_BEGIN(1)
 #define STM_BEGIN_WR()                  STM_BEGIN(0)
-#define STM_END()                       TxCommit(STM_SELF)
+#define STM_END()                       ({  write_set_t* beginPtr = write_set;
+                                            write_set_t* endPtr = write-set + sizeof(write-set)/sizeof(write-set[0]); 
+                                             if(write-set != null)
+                                                upperBound = NEXT_CLOCK();
+                                                if(upperBound != (lowerBound + 1){
+                                                    if(!VALIDATE(read_set))
+                                                        { _xabort(0xab);}
+                                                    o_set = null;
+                                                }
+                                                while(beginPtr < endptr){
+                                                    TxStore(STM_SELF, (vintp*)(void*)&(beginPtr.address), (intptr_t)(beginPtr.val))
+                                                    o_set_it = o_set;
+                                                    o_set_it++ = malloc(sizeof(long));
+                                                    o_set_it = beginPtr.address;
+                                                }
+                                                //TODO RELEASE ORECS
+                                            })
+
+
+                                            TxCommit(STM_SELF)
 #define HYBRID_HTM_END()				 TxCommitNoAbortHTM(STM_SELF)
 #define HYBRID_STM_END()				 TxCommitNoAbortSTM(STM_SELF)
 #define AFTER_COMMIT()					 AfterCommit(STM_SELF)
