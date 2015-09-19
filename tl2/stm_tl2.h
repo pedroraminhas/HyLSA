@@ -64,11 +64,48 @@ extern __attribute__((aligned(CACHE_LINE_SIZE))) orec* orecs; //TO DO
                                                     } 
                                                     0;
                                                 })
-# define GET_VALUE_IN_WRITE_SET(var, val) ({  write_set_t* ptr = write-set;
+# define GET_VALUE_IN_WRITE_SET(var) ({  write_set_t* ptr = write-set;
                                                 write_set_t* endPtr = write_set + sizeof(write_set)/sizeof(write-set[0]);
                                                 while (ptr < endPtr) {
                                                     if (ptr.address == var)
                                                         ptr.val;
+                                                  }
+                                                })
+# define SET_VALUE_IN_WRITE_SET(var,val,write-set) ({  write_set_t* ptr = write-set;
+                                                write_set_t* endPtr = write_set + sizeof(write_set)/sizeof(write-set[0]);
+                                                bool in_write_set = false;
+                                                while (ptr < endPtr) {
+                                                    if (ptr.address == var){
+                                                        ptr.val=val;
+                                                        in_write_set = true;
+                                                    }
+                                                  } 
+                                                  if(in_write_set == false){
+                                                    endPtr++;
+                                                    endPtr = malloc(sizeof(write_set_t));
+                                                    endPtr.address = var;
+                                                    endptr.val = val;
+                                                  }
+                                                   
+                                                })
+
+//Operations to the Read-set
+# define IS_IN_READ_SET(var) ({  read_set_t* ptr= read_set;
+                                 read_set_t* endPtr = read_set + sizeof(read_set)/sizeof(read-set[0]);
+                                                while ( ptr < endPtr ){
+                                                      if(ptr.address == var) 
+                                                        1;
+                                                        ptr++;
+                                                    } 
+                                                    0;
+                                                })
+
+//Returns the version of a address on the read-set
+# define GET_VERSION_IN_READ_SET(var) ({  read_set_t* ptr = read-set;
+                                                read_set_t* endPtr = read_set + sizeof(read_set)/sizeof(read-set[0]);
+                                                while (ptr < endPtr) {
+                                                    if (ptr.address == var)
+                                                        ptr.version;
                                                   }
                                                 })
 
@@ -142,7 +179,7 @@ typedef volatile intptr_t               vintp;
                                                     upperBound = clock;
                                                 if (!VALIDATE(read_set))
                                                     { _xabort(0xab);}
-                                                val = var;
+                                                val = TxLoad(STM_SELF, (vintp*)(void*)&(var));
                                                 read_set_t* new_read_set_tuple = malloc(sizeof(read_set_t));
                                                 new_read_set_tuple.address = var;
                                                 new_read_set_tuple.val = val;
@@ -150,7 +187,7 @@ typedef volatile intptr_t               vintp;
                                                 val;
                                             }
 
-                                        }) TxLoad(STM_SELF, (vintp*)(void*)&(var))
+                                        }) 
 
 
 #define STM_READ_D(var)                 IP2D(TxLoad(STM_SELF, \
@@ -158,9 +195,20 @@ typedef volatile intptr_t               vintp;
 #define STM_READ_P(var)                 IP2VP(TxLoad(STM_SELF, \
                                                      (vintp*)(void*)&(var)))
 
-#define STM_WRITE(var, val)             TxStore(STM_SELF, \
+#define STM_WRITE(var, val) ({orec* fetched_orec = FETCH_OREC(var);
+                                if(fetched_orec.locked){
+                                    if(fetched_orec.owner != /*id of thread*/)
+                                        { _xabort(0xab);}
+                                }else{
+                                    if(IS_IN_READ_SET(var) && (fetched_orec.version != GET_VERSION_IN_READ_SET(var)))
+                                        { _xabort(0xab);}
+                                    TxStore(STM_SELF, \
                                                 (vintp*)(void*)&(var), \
                                                 (intptr_t)(val))
+                                }
+                                    SET_VALUE_IN_WRITE_SET(var, val, write_set);
+                                })            
+
 #define STM_WRITE_D(var, val)           TxStore(STM_SELF, \
                                                 (vintp*)DP2IPP(&(var)), \
                                                 D2IP(val))
