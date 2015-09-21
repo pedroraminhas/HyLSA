@@ -84,13 +84,13 @@
         unsigned long* o_set = null;     //MALLOC_ORECS_STRUCT(o_set);
 		while (1) {
 			if (tries > 0) { \
-				unsigned int status = _xbegin();	\
-				if (status == _XBEGIN_STARTED) { \} \
+                unsigned char status = __TM_begin(&TM_buff); \ 
+				if (status == _XBEGIN_STARTED) { \
                     if (ro == 0) { next_commit = NEXT_CLOCK(); } \
 					break;	\
 				} \
 				else if (status == _XABORT_CAPACITY) { \
-               SPEND_BUDGET(&tries); \
+               SPEND_BUDGET(&tries); \:1
             } \
             else { \
                tries--; \
@@ -118,7 +118,7 @@
                     ptr.owner = 0 ; //Ask shady what to put in the ID
                     ptr++;
                 }  }    \
-            _xend();\
+         __TM_end(); \
         } else {    \
            commit_timestamp =  __sync_add_and_fetch(&next_commit,1);    \
             int ret = HYBRID_STM_END();  \
@@ -154,37 +154,37 @@
 #      define FAST_PATH_FREE(ptr)        free(ptr)
 #      define SLOW_PATH_FREE(ptr)
 
-# define FAST_PATH_RESTART() _xabort(0xab);
+# define FAST_PATH_RESTART() __TM_abort();
 # define FAST_PATH_SHARED_READ(var) ({   orec = FETCH_OREC ;
-                                          if (orec.locked == true) { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                          if (orec.locked == true) {FAST_PATH_SHARED_READ(var)}; /* orec owned by other sw tx*/
                                                var;})
 
 
 
 # define FAST_PATH_SHARED_READ_P(var) ({     orec = FETCH_OREC(var);
-                                            if (orec.locked == true) { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                            if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; /* orec owned by other sw tx*/
                                             var;})
 # define FAST_PATH_SHARED_READ_D(var) ({     orec = FETCH_OREC(var) ;
-                                            if (orec.locked == true) { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                            if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; /* orec owned by other sw tx*/
                                             var;})
 
 
 # define FAST_PATH_SHARED_WRITE(var, val) ({  orec = FETCH_OREC(var);;
-                                                if (orec.locked == true)  { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                                if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)}; /* orec owned by other sw tx*/
                                                 HTM_WRITE((vintp*)(void*)&(var), (intptr_t)val, next_commit); /* PREFETCHW */
                                                 HTM_WRITE((vintp*)(void*)&(var),(intptr_t)val, next_commit);
                                                 var = val;
                                                 ADD_OSET(var);})
 
 # define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec = FETCH_OREC(var);;
-                                                     if (orec.locked == true)  { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                                     if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)}; /* orec owned by other sw tx*/
                                                          HTM_WRITE((vintp*)(void*)&(var), VP2IP(var), next_commit); /* PREFETCHW */
                                                          HTM_WRITE((vintp*)(void*)&(var), VP2IP(val), next_commit);
                                                            var = val;
                                                             ADD_OSET(var);})
 
 # define FAST_PATH_SHARED_WRITE_D(var, val) ({  orec = FETCH_OREC(var);;
-                                                    if (orec.locked == true)  { _xabort(0xab);}; /* orec owned by other sw tx*/
+                                                    if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)}; /* orec owned by other sw tx*/
                                                         HTM_WRITE((vintp*)(void*)&(var),  D2IP(val), next_commit); /* PREFETCHW */
                                                         HTM_WRITE((vintp*)(void*)&(var),  D2IP(val), next_commit);
                                                          var = val;
