@@ -28,10 +28,12 @@
 #  include "types.h"
 #endif
 
-#include <immintrin.h>
-#include <rtmintrin.h>
-#include "stm_tl2.h"
-#include "tl2.h"
+//#include <immintrin.h>
+//#include <rtmintrin.h>
+#include <htmxlintrin.h>
+//#include "stm_tl2.h"
+#include "stm_internal.h"
+//#include "tl2.h"
 
 # define AL_LOCK(b)
 # define PRINT_STATS()

@@ -5,11 +5,9 @@
 #include <stdlib.h>
 #include "types.h"
 
-#include <immintrin.h>
-#include <rtmintrin.h>
+#include <htmxlintrin.h>
 
-#include "stm_tl2.h"
-#include "tl2.h"
+#include "stm_internal.h"
 
 
 # define CACHE_LINE_SIZE 64
