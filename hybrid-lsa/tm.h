@@ -32,7 +32,7 @@
 //#include <rtmintrin.h>
 #include <htmxlintrin.h>
 //#include "stm_tl2.h"
-#include "stm_internal.h"
+//#include "stm_internal.h"
 //#include "tl2.h"
 
 # define AL_LOCK(b)
@@ -83,7 +83,7 @@
 #    define TM_BEGIN_EXT(b,mode,ro) { \
         unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
-        unsigned long* o_set = null; \    //MALLOC_ORECS_STRUCT(o_set);
+        unsigned long* o_set = null; \
 		while (1) {   \
 			if (tries > 0) { \
                 unsigned char status = __TM_begin(&TM_buff); \ 
@@ -92,7 +92,7 @@
 					break;	\
 				} \
 				else if (status == _XABORT_CAPACITY) { \
-               SPEND_BUDGET(&tries); \:1
+               SPEND_BUDGET(&tries);	\
             } \
             else { \
                tries--; \
@@ -112,12 +112,12 @@
         orec* endPtr = o_set + sizeof(o_set)/sizeof(o_set[0]);  \
         int commit_timestamp = 0;   \
         if ((tries > 0) ) {    \
-            if(o_set != null){  \        //Warning
+            if(o_set != null){  \
                 commit_timestamp = __sync_add_and_fetch(&next_commit,1);    \
                 while ( ptr < endPtr ){ \
                     ptr.locked = false; \
                     ptr.version = commit_timestamp; \
-                    ptr.owner = 0 ; \    //Ask shady what to put in the ID
+                    ptr.owner = 0 ; \
                     ptr++;  \
                 }  \
             }    \
@@ -134,7 +134,6 @@
         } \
         statistics_array[SPECIAL_THREAD_ID()].commits++; \
 }
-};
 
 
 #    define TM_EARLY_RELEASE(var)         
@@ -164,7 +163,7 @@
 
 
 
-# define FAST_PATH_SHARED_READ_P(var) ({     orec = FETCH_OREC(var);
+# define FAST_PATH_SHARED_READ_P(var) ({     orec = FETCH_OREC(var);	\
                                             if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; \
                                             var;})
 # define FAST_PATH_SHARED_READ_D(var) ({     orec = FETCH_OREC(var) ;   \
@@ -172,7 +171,7 @@
                                             var;})
 
 
-# define FAST_PATH_SHARED_WRITE(var, val) ({  orec = FETCH_OREC(var);
+# define FAST_PATH_SHARED_WRITE(var, val) ({  orec = FETCH_OREC(var);	\
                                                 if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)}; \
                                                 HTM_WRITE((vintp*)(void*)&(var), (intptr_t)val, next_commit); \
                                                 HTM_WRITE((vintp*)(void*)&(var),(intptr_t)val, next_commit);    \

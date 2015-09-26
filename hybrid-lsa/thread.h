@@ -7,7 +7,7 @@
 
 #include <htmxlintrin.h>
 
-#include "stm_internal.h"
+//#include "stm_internal.h"
 
 
 # define CACHE_LINE_SIZE 64
