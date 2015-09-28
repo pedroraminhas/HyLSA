@@ -50,7 +50,8 @@
                                       STM_INIT_THREAD(inited_thread, SPECIAL_THREAD_ID()); \
                                       thread_desc[SPECIAL_THREAD_ID()] = (void*)inited_thread;
 #else
-#    define TM_ARG_ALONE                  tinystm_Self
+//#    define TM_ARG_ALONE                  tinystm_Self
+#    define TM_ARG_ALONE		get_thread()
 #    define SPECIAL_THREAD_ID()         thread_getId()
 #    define TM_ARGDECL                   TINYSTM_TX TM_ARG
 //#    define TM_ARGDECL                    STM_THREAD_T* TM_ARG
@@ -85,11 +86,12 @@
 #    define TM_BEGIN_EXT(b,mode,ro) { \
         unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
-        unsigned long* o_set = null; \
+        unsigned long* o_set; \
 		while (1) {   \
 			if (tries > 0) { \
+		TM_buff_type TM_buff; \
                 unsigned char status = __TM_begin(&TM_buff); \ 
-				if (status == _XBEGIN_STARTED) { \
+				if (status == _HTM_TBEGIN_STARTED) { \
                     if (ro == 0) { next_commit = NEXT_CLOCK(); } \
 					break;	\
 				} \
