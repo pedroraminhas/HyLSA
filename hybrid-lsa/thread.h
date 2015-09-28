@@ -12,7 +12,7 @@
 
 # define CACHE_LINE_SIZE 64
 
-extern __thread vwLock next_commit;
+//extern __thread vwLock next_commit;
 
 typedef struct padded_scalar {
     bool locked;

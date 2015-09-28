@@ -105,6 +105,8 @@
 extern "C" {
 # endif
 
+#define TINYSTM_TX	stm_tx
+
 struct stm_tx;
 /**
  * Return the current transaction descriptor.

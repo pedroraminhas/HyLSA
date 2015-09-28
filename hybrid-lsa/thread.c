@@ -4,7 +4,7 @@
 
 #include "thread.h"
 
-__thread vwLock next_commit;
+//__thread vwLock next_commit;
 
 __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t fallback_in_use;
 
