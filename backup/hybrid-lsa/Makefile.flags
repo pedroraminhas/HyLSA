@@ -1,0 +1,5 @@
+CFLAGS   += -w $(HTM_RETRIES) $(RETRY_POLICY)
+
+CPPFLAGS := $(CFLAGS)
+LIBS     += $(CFLAGS) -L/home/shady/lib/ -I../../../rapl-power/ -I ../../../stms/tinystm/src -lrt -mhtm -lm -L../../../rapl-power/  -L../../../stms/tinystm/lib -lstm -ltcmalloc -lpthread
+LDFLAGS  += $(LIBS)

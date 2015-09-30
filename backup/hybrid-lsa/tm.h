@@ -89,19 +89,25 @@
         unsigned long* o_set; \
 		while (1) {   \
 			if (tries > 0) { \
-                if (mode == 0)  {   \
-                    TM_buff_type TM_buff; \
-                    unsigned int status = __TM_begin(&TM_buff); \
-                    if (status == _HTM_TBEGIN_STARTED) { \
-                        break;  \
-                    }   \
-                    //initialize the orec   \
-                    tries--;    \
-                }       \
-                if(mode == 1)   {   \
-                    stm_init(); \
-                }   \
-            }   \
+	           	TM_buff_type TM_buff; \
+                unsigned char status = __TM_begin(&TM_buff); \ 
+				if (status == _HTM_TBEGIN_STARTED) { \
+                    if (ro == 0) { next_commit = NEXT_CLOCK(); } \
+					break;	\
+				    } \
+				else if (status == _XABORT_CAPACITY) { \
+                         SPEND_BUDGET(&tries);	\
+                        } \
+                         else { \
+                             tries--; \
+                             } \
+                    statistics_array[SPECIAL_THREAD_ID()].aborts++; \
+			} else {  \
+				mode = 1; \
+				STM_BEGIN(ro); \
+				statistics_array[SPECIAL_THREAD_ID()].aborts++; \
+				break;  \
+			} \
 	}
 
 
