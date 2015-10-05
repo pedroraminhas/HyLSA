@@ -107,6 +107,24 @@ extern "C" {
 
 #define TINYSTM_TX	stm_tx
 
+
+/*
+* Orec Struct
+*/
+typedef struct orecs{
+  bool locked;
+  unsigned long owner;
+  unsigned long version;
+}orec;
+
+
+/*  
+* Operations over orecs 
+*/
+# define FETCH_OREC (addr) {     orec* ptr = orecs; \
+                                 ptr = ptr + addr;  \
+                                 ptr; }
+
 struct stm_tx;
 /**
  * Return the current transaction descriptor.

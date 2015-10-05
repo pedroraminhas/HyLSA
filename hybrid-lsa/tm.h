@@ -164,6 +164,7 @@
 # define FAST_PATH_SHARED_READ_P(var) ({     orec = FETCH_OREC(var);	\
                                             if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; \
                                             var;})
+
 # define FAST_PATH_SHARED_READ_D(var) ({     orec = FETCH_OREC(var) ;   \
                                             if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; \
                                             var;})
