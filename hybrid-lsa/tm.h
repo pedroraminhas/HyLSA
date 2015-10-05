@@ -87,6 +87,7 @@
         unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
         unsigned long* o_set; \
+        orec* orecs;  \
 		while (1) {   \
 			if (tries > 0) { \
                 if (mode == 0)  {   \
@@ -155,39 +156,46 @@
 #      define SLOW_PATH_FREE(ptr)
 
 # define FAST_PATH_RESTART() __TM_abort();
-# define FAST_PATH_SHARED_READ(var) ({   orec = FETCH_OREC ;    \
-                                          if (orec.locked == true) {FAST_PATH_SHARED_READ(var)}; \
+# define FAST_PATH_SHARED_READ(var) ({  orec* orec = fetch_orec(var,orecs);    \
+                                          if ((orec->locked) == 1)  \
+                                             { __TM_abort(); }  \
                                                var;})
 
 
 
-# define FAST_PATH_SHARED_READ_P(var) ({     orec = FETCH_OREC(var);	\
-                                            if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; \
-                                            var;})
+# define FAST_PATH_SHARED_READ_P(var) ({   orec* orec = fetch_orec(var,orecs);    \
+                                          if ((orec->locked) == 1)  \
+                                             { __TM_abort(); }  \
+                                               var;})
 
-# define FAST_PATH_SHARED_READ_D(var) ({     orec = FETCH_OREC(var) ;   \
-                                            if (orec.locked == true) { FAST_PATH_SHARED_READ(var)}; \
-                                            var;})
+# define FAST_PATH_SHARED_READ_D(var) ({  orec* orec = fetch_orec(var,orecs);    \
+                                          if ((orec->locked) == 1)  \
+                                             { __TM_abort(); }  \
+                                               var;})
 
 
-# define FAST_PATH_SHARED_WRITE(var, val) ({  orec = FETCH_OREC(var);	\
-                                                if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)}; \
+# define FAST_PATH_SHARED_WRITE(var, val) ({  orec* orec = fetch_orec(var,orecs);	\
+                                               if ((orec->locked) == 1) {  \
+                                                         __TM_abort(); \
+                                                        }   \
                                                 HTM_WRITE((vintp*)(void*)&(var), (intptr_t)val, next_commit); \
                                                 HTM_WRITE((vintp*)(void*)&(var),(intptr_t)val, next_commit);    \
                                                 var = val;  \
                                                 ADD_OSET(var);})
 
-# define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec = FETCH_OREC(var);    \
-                                                     if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)};   \
+# define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec* orec = fetch_orec(var,orecs);    \
+                                                     if ((orec->locked) == 1) {  \
+                                                         __TM_abort(); \
+                                                        }   \
                                                          HTM_WRITE((vintp*)(void*)&(var), VP2IP(var), next_commit); \
                                                          HTM_WRITE((vintp*)(void*)&(var), VP2IP(val), next_commit); \
                                                            var = val;   \
                                                             ADD_OSET(var);})
 
-# define FAST_PATH_SHARED_WRITE_D(var, val) ({  orec = FETCH_OREC(var); \   
-                                                    if (orec.locked == true)  { FAST_PATH_SHARED_READ(var)}; \
-                                                        HTM_WRITE((vintp*)(void*)&(var),  D2IP(val), next_commit); \
-                                                        HTM_WRITE((vintp*)(void*)&(var),  D2IP(val), next_commit);  \
+# define FAST_PATH_SHARED_WRITE_D(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
+                                                    if ((orec->locked) == 1) {  \
+                                                         __TM_abort(); \
+                                                        }   \                                                        HTM_WRITE((vintp*)(void*)&(var),  D2IP(val), next_commit);  \
                                                          var = val; \
                                                         ADD_OSET(var);})
 

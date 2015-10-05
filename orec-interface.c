@@ -33,7 +33,6 @@ orec* init_orec(unsigned long address,int locked, unsigned long owner){
 
 orec* fetch_orec (unsigned long address, orec* orecs ) { 
 	while(orecs != 0){
-	//while (orecs!= first_element_orecs){
 		if((orecs->address) == address){
 			printf("CHEGUEI\n");
 			return orecs;}
