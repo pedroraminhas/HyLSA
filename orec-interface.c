@@ -10,6 +10,32 @@ struct orecs{
 
 typedef struct orecs orec;
 
+struct o_sets{
+	long address;
+	struct o_sets* previous_o_set;
+	struct o_sets* next_o_set;	
+};
+
+typedef struct o_sets o_set;
+
+o_set* init_o_set(long address){
+	o_set* new_o_set;
+	new_o_set = malloc (sizeof(o_set));
+	new_o_set->address = address;
+	new_o_set->previous_o_set=0;
+	new_o_set->next_o_set=0;
+	return new_o_set;
+}
+
+o_set* add_to_o_set(o_set* o_set_param, long address){
+	o_set* next_o_set;
+	(o_set_param->next_o_set) = malloc(sizeof(o_set));
+	next_o_set = (o_set_param->next_o_set);
+ 	next_o_set->address = address;
+ 	(next_o_set->previous_o_set) = o_set_param;
+ 	return next_o_set;
+}
+
 
 orec* add_orec(orec* orecs,unsigned long address,int locked, unsigned long owner) {
  	(orecs->next_orec) = malloc(sizeof(orec));
@@ -44,11 +70,16 @@ orec* fetch_orec (unsigned long address, orec* orecs ) {
 } 
 
 int main()
-{	
-	orec* orecs = init_orec(999,0,8);
-	orecs = add_orec (orecs,888,0,2);
-	orecs = add_orec (orecs,888,0,2);
-	printf("%ld \n", fetch_orec(999,orecs)->owner);
+{	//orec* orecs = init_orec(999,0,8);
+	//orecs = add_orec (orecs,888,0,2);
+	//orecs = add_orec (orecs,888,0,2);
+	printf("TESTE1\n");
+	o_set* o  = init_o_set(555);
+	printf("TESTE2\n");
+	o = add_to_o_set(o,4);
+	o = add_to_o_set(o,9005);
+	o = add_to_o_set(o,911);
+	printf("%ld \n", (o->previous_o_set)->address);
     printf("Hello World \n");
     return 0;
 }
