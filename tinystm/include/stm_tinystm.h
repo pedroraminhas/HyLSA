@@ -121,6 +121,18 @@ struct orecs{
 typedef struct orecs orec;
 
 
+/*
+* O-set Struct
+*/
+
+struct o_sets{
+  long address;
+  struct o_sets* previous_o_set;
+  struct o_sets* next_o_set;  
+};
+
+typedef struct o_sets o_set;
+
 /*  
 * Operations over orecs 
 */
@@ -157,6 +169,27 @@ orec* fetch_orec (unsigned long address, orec* orecs ) {
   return null_orec;
 } 
 
+/*  
+* Operations over o-sets
+*/
+
+o_set* init_o_set(long address){
+  o_set* new_o_set;
+  new_o_set = malloc (sizeof(o_set));
+  new_o_set->address = address;
+  new_o_set->previous_o_set=0;
+  new_o_set->next_o_set=0;
+  return new_o_set;
+}
+
+o_set* add_to_o_set(o_set* o_set_param, long address){
+  o_set* next_o_set;
+  (o_set_param->next_o_set) = malloc(sizeof(o_set));
+  next_o_set = (o_set_param->next_o_set);
+  next_o_set->address = address;
+  (next_o_set->previous_o_set) = o_set_param;
+  return next_o_set;
+}
 
 
 struct stm_tx;

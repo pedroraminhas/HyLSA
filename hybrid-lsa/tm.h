@@ -86,7 +86,7 @@
 #    define TM_BEGIN_EXT(b,mode,ro) { \
         unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
-        unsigned long* o_set; \
+        unsigned long* o_set_at; \
         orec* orecs;  \
 		while (1) {   \
 			if (tries > 0) { \
@@ -96,7 +96,7 @@
                     if (status == _HTM_TBEGIN_STARTED) { \
                         break;  \
                     }   \
-                    //initialize the orec   \
+                    //initialize the o-set   \
                     tries--;    \
                 }       \
                 if(mode == 1)   {   \
@@ -142,9 +142,7 @@
                                              ptr; }  )
 
 #      define MALLOC_OREC_STRUCT(ptr)      ({ptr = malloc(sizeof(orec));})
-#      define ADD_OSET (orecToBeAdd)       ({long* ptr = o_set++;   \
-                                             ptr = malloc(sizeof(long));    \
-                                            *ptr = orecToBeAdd;})
+
 
 #      define P_MALLOC(size)            malloc(size)
 #      define P_FREE(ptr)               free(ptr)
@@ -174,30 +172,35 @@
                                                var;})
 
 
-# define FAST_PATH_SHARED_WRITE(var, val) ({  orec* orec = fetch_orec(var,orecs);	\
-                                               if ((orec->locked) == 1) {  \
+# define FAST_PATH_SHARED_WRITE(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
+                                                    if ((orec->locked) == 1) {  \
                                                          __TM_abort(); \
-                                                        }   \
-                                                HTM_WRITE((vintp*)(void*)&(var), (intptr_t)val, next_commit); \
-                                                HTM_WRITE((vintp*)(void*)&(var),(intptr_t)val, next_commit);    \
-                                                var = val;  \
-                                                ADD_OSET(var);})
+                                                        }   \    
+                                                        var;    \
+                                                         var = val; \
+                                                        o_set_atribute++;    \
+                                                        o_set_atribute = malloc(sizeof(long)); 
+                                                        o_set_atribute = add_to_o_set(o_set_atribute)}) 
 
-# define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec* orec = fetch_orec(var,orecs);    \
-                                                     if ((orec->locked) == 1) {  \
+# define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
+                                                    if ((orec->locked) == 1) {  \
                                                          __TM_abort(); \
-                                                        }   \
-                                                         HTM_WRITE((vintp*)(void*)&(var), VP2IP(var), next_commit); \
-                                                         HTM_WRITE((vintp*)(void*)&(var), VP2IP(val), next_commit); \
-                                                           var = val;   \
-                                                            ADD_OSET(var);})
+                                                        }   \    
+                                                        var;    \
+                                                         var = val; \
+                                                        o_set_atribute++;    \
+                                                        o_set_atribute = malloc(sizeof(long)); 
+                                                        o_set_atribute = add_to_o_set(o_set_atribute)}) 
 
 # define FAST_PATH_SHARED_WRITE_D(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
                                                     if ((orec->locked) == 1) {  \
                                                          __TM_abort(); \
-                                                        }   \                                                        HTM_WRITE((vintp*)(void*)&(var),  D2IP(val), next_commit);  \
+                                                        }   \    
+                                                        var;    \
                                                          var = val; \
-                                                        ADD_OSET(var);})
+                                                        o_set_atribute++;    \
+                                                        o_set_atribute = malloc(sizeof(long)); 
+                                                        o_set_atribute = add_to_o_set(o_set_atribute)})    
 
 
 # define SLOW_PATH_RESTART() STM_RESTART();
