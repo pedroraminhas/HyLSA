@@ -126,7 +126,7 @@ typedef struct orecs orec;
 */
 
 struct o_sets{
-  long address;
+  unsigned long address;
   struct o_sets* previous_o_set;
   struct o_sets* next_o_set;  
 };
@@ -173,7 +173,7 @@ orec* fetch_orec (unsigned long address, orec* orecs ) {
 * Operations over o-sets
 */
 
-o_set* init_o_set(long address){
+o_set* init_o_set(unsigned long address){
   o_set* new_o_set;
   new_o_set = malloc (sizeof(o_set));
   new_o_set->address = address;
@@ -182,7 +182,7 @@ o_set* init_o_set(long address){
   return new_o_set;
 }
 
-o_set* add_to_o_set(o_set* o_set_param, long address){
+o_set* add_to_o_set(o_set* o_set_param, unsigned long address){
   o_set* next_o_set;
   (o_set_param->next_o_set) = malloc(sizeof(o_set));
   next_o_set = (o_set_param->next_o_set);

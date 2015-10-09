@@ -86,7 +86,7 @@
 #    define TM_BEGIN_EXT(b,mode,ro) { \
         unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
-        unsigned long* o_set_at; \
+        o_set* o_set_atribute; \
         orec* orecs;  \
 		while (1) {   \
 			if (tries > 0) { \
@@ -178,9 +178,7 @@
                                                         }   \    
                                                         var;    \
                                                          var = val; \
-                                                        o_set_atribute++;    \
-                                                        o_set_atribute = malloc(sizeof(long)); 
-                                                        o_set_atribute = add_to_o_set(o_set_atribute)}) 
+                                                        o_set_atribute = add_to_o_set(o_set_atribute, var);}) 
 
 # define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
                                                     if ((orec->locked) == 1) {  \
@@ -188,9 +186,7 @@
                                                         }   \    
                                                         var;    \
                                                          var = val; \
-                                                        o_set_atribute++;    \
-                                                        o_set_atribute = malloc(sizeof(long)); 
-                                                        o_set_atribute = add_to_o_set(o_set_atribute)}) 
+                                                        o_set_atribute = add_to_o_set(o_set_atribute, var);}) 
 
 # define FAST_PATH_SHARED_WRITE_D(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
                                                     if ((orec->locked) == 1) {  \
@@ -198,9 +194,7 @@
                                                         }   \    
                                                         var;    \
                                                          var = val; \
-                                                        o_set_atribute++;    \
-                                                        o_set_atribute = malloc(sizeof(long)); 
-                                                        o_set_atribute = add_to_o_set(o_set_atribute)})    
+                                                        o_set_atribute = add_to_o_set(o_set_atribute, var);})    
 
 
 # define SLOW_PATH_RESTART() STM_RESTART();
