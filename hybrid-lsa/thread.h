@@ -15,9 +15,8 @@
 //extern __thread vwLock next_commit;
 
 typedef struct padded_scalar {
-    bool locked;
-    unsigned long owner;
-    unsigned long version;
+    volatile unsigned long counter;
+    char suffixPadding[CACHE_LINE_SIZE];
 } __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t;
 
 typedef struct padded_statistics {
@@ -27,6 +26,8 @@ typedef struct padded_statistics {
 } __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t;
 
 extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t statistics_array[];
+
+extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t htm_clock;
 
 //extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t orec;
 

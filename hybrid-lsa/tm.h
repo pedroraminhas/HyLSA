@@ -31,7 +31,6 @@
 //#include <immintrin.h>
 //#include <rtmintrin.h>
 #include <htmxlintrin.h>
-//#include "stm_tl2.h"
 //#include "stm_internal.h"
 //#include "tl2.h"
 #include "stm_tinystm.h"
@@ -43,7 +42,7 @@
 
 #ifdef REDUCED_TM_API
 #    define tinystm_Self                        TM_ARG_ALONE
-#    define TM_ARG_ALONE                get_thread()
+#    define TM_ARG_ALONE                &get_thread()
 #    define SPECIAL_THREAD_ID()         get_tid()
 #    define SPECIAL_INIT_THREAD(id)     thread_desc[id] = (void*)TM_ARG_ALONE;
 #    define TM_THREAD_ENTER()         Thread* inited_thread = STM_NEW_THREAD(); \
@@ -51,7 +50,7 @@
                                       thread_desc[SPECIAL_THREAD_ID()] = (void*)inited_thread;
 #else
 //#    define TM_ARG_ALONE                  tinystm_Self
-#    define TM_ARG_ALONE		get_thread()
+#    define TM_ARG_ALONE		&get_thread()
 #    define SPECIAL_THREAD_ID()         thread_getId()
 #    define TM_ARGDECL                   TINYSTM_TX TM_ARG
 //#    define TM_ARGDECL                    STM_THREAD_T* TM_ARG
@@ -96,7 +95,7 @@
                     if (status == _HTM_TBEGIN_STARTED) { \
                         break;  \
                     }   \
-                    //initialize the o-set   \
+                    /*initialize the o-set*/   \
                     tries--;    \
                 }       \
                 if(mode == 1)   {   \
@@ -106,42 +105,41 @@
 	}
 
 
-#    define TM_END()    {    \
-        orec* ptr = o_set;  \
-        orec* endPtr = o_set + sizeof(o_set)/sizeof(o_set[0]);  \
+#    define TM_END()    \
         int commit_timestamp = 0;   \
+        o_set* o_set_pointer = o_set_atribute; \; \
+        orec* fetched_orec;   \
         if ((tries > 0) ) {    \
-            if(o_set != null){  \
-                commit_timestamp = __sync_add_and_fetch(&next_commit,1);    \
-                while ( ptr < endPtr ){ \
-                    ptr.locked = false; \
-                    ptr.version = commit_timestamp; \
-                    ptr.owner = 0 ; \
-                    ptr++;  \
-                }  \
+            if((o_set_atribute->previous_o_set != 0) && (o_set_atribute->next_o_set != 0))  {   \
+                commit_timestamp = __sync_add_and_fetch(&htm_clock.counter,1); \
+                while ( (o_set_pointer->previous_o_set != 0) ){ \
+                    fetched_orec = fetch_orec(orecs,(o_set_pointer->address));  \
+                    fetched_orec->locked=0; \
+                    o_set_pointer = (o_set_pointer->previous_o_set);    \
+                }    \
+                fetched_orec = fetch_orec (orecs,(o_set_pointer->address)); \
+                fetched_orec->locked=0; \
             }    \
          __TM_end(); \
         } else {    \
-           commit_timestamp =  __sync_add_and_fetch(&next_commit,1);    \
+           commit_timestamp =  __sync_add_and_fetch(&htm_clock.counter,1);    \
             int ret = HYBRID_STM_END();  \
-            commit_timestamp = __sync_sub_and_fetch(&next_commit,1);    \
+            commit_timestamp = __sync_sub_and_fetch(&htm_clock.counter,1);    \
             if (ret == 0) { \
                 STM_RESTART(); \
             } \
-            AFTER_COMMIT(); \
+            __sync_sub_and_fetch(&htm_clock.counter,1); \
             statistics_array[SPECIAL_THREAD_ID()].aborts--; \
         } \
         statistics_array[SPECIAL_THREAD_ID()].commits++; \
-}
-
-
-#    define TM_EARLY_RELEASE(var)         
+};
+      
 
 # define FETCH_OREC (addr)            ({     orec* ptr = orecs; \
                                              ptr = ptr + addr;  \
                                              ptr; }  )
 
-#      define MALLOC_OREC_STRUCT(ptr)      ({ptr = malloc(sizeof(orec));})
+#      define MALLOC_OREC_STRUCT(ptr)       ({ptr = malloc(sizeof(orec));})
 
 
 #      define P_MALLOC(size)            malloc(size)
@@ -198,13 +196,13 @@
 
 
 # define SLOW_PATH_RESTART() STM_RESTART();
-# define SLOW_PATH_SHARED_READ(var)           STM_READ(var)
-# define SLOW_PATH_SHARED_READ_P(var)         STM_READ_P(var)
-# define SLOW_PATH_SHARED_READ_F(var)         STM_READ(var)
-# define SLOW_PATH_SHARED_READ_D(var)         STM_READ_D(var)
-# define SLOW_PATH_SHARED_WRITE(var, val)     STM_WRITE((var), val)
-# define SLOW_PATH_SHARED_WRITE_P(var, val)   STM_WRITE_P((var), val)
-# define SLOW_PATH_SHARED_WRITE_D(var, val)   STM_WRITE_D((var), val)
+# define SLOW_PATH_SHARED_READ(var)           stm_load((void*)&(var))
+# define SLOW_PATH_SHARED_READ_P(var)         stm_load((void*)&(var))
+# define SLOW_PATH_SHARED_READ_F(var)         stm_load((void*)&(var))
+# define SLOW_PATH_SHARED_READ_D(var)         stm_load((void*)&(var))
+# define SLOW_PATH_SHARED_WRITE(var, val)     stm_store((void*)&(var), val)
+# define SLOW_PATH_SHARED_WRITE_P(var, val)   stm_store((void*)&(var), val)
+# define SLOW_PATH_SHARED_WRITE_D(var, val)   stm_store((void*)&(var), val)
 
 #  define TM_LOCAL_WRITE(var, val)      ({var = val; var;})
 #  define TM_LOCAL_WRITE_P(var, val)    ({var = val; var;})

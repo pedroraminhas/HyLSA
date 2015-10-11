@@ -8,6 +8,8 @@
 
 __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t fallback_in_use;
 
+__attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t htm_clock;
+
 __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t statistics_array[128];
 
 #ifndef REDUCED_TM_API
@@ -81,7 +83,7 @@ void thread_startup (long numThread)
     global_threads = (THREAD_T*)malloc(numThread * sizeof(THREAD_T));
     assert(global_threads);
 
-	startEnergy();
+	htm_clock.counter = 0;
 
     /* Set up pool */
     THREAD_ATTR_INIT(global_threadAttr);

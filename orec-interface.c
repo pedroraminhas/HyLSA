@@ -76,9 +76,8 @@ int main()
 	printf("TESTE1\n");
 	o_set* o  = init_o_set(555);
 	printf("TESTE2\n");
-	o = add_to_o_set(o,4);
-	o = add_to_o_set(o,9005);
-	o = add_to_o_set(o,911);
+	if((o->previous_o_set == 0) && (o->next_o_set == 0))
+		printf("O-SET vazio\n");
 	printf("%ld \n", (o->previous_o_set)->address);
     printf("Hello World \n");
     return 0;

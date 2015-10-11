@@ -107,6 +107,10 @@ extern "C" {
 
 #define TINYSTM_TX	stm_tx
 
+#define tinystm_Self    TM_ARG_ALONE
+#define HYBRID_STM_END()    stm_commit_tx(tinystm_Self)
+
+#define STM_RESTART()       stm_abort_tx(tinystm_Self,0)
 
 /*
 * Orec Struct
