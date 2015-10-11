@@ -41,20 +41,20 @@
 # define SETUP_NUMBER_THREADS(b)
 
 #ifdef REDUCED_TM_API
-#    define tinystm_Self                        TM_ARG_ALONE
-#    define TM_ARG_ALONE                &get_thread()
+#    define tinystm_Self                TM_ARG_ALONE
+#    define TM_ARG_ALONE                &stm_current_tx()
 #    define SPECIAL_THREAD_ID()         get_tid()
 #    define SPECIAL_INIT_THREAD(id)     thread_desc[id] = (void*)TM_ARG_ALONE;
 #    define TM_THREAD_ENTER()         Thread* inited_thread = STM_NEW_THREAD(); \
-                                      STM_INIT_THREAD(inited_thread, SPECIAL_THREAD_ID()); \
-                                      thread_desc[SPECIAL_THREAD_ID()] = (void*)inited_thread;
+                                     STM_INIT_THREAD(inited_thread, SPECIAL_THREAD_ID()); \
+                                     thread_desc[SPECIAL_THREAD_ID()] = (void*)inited_thread;
 #else
 //#    define TM_ARG_ALONE                  tinystm_Self
-#    define TM_ARG_ALONE		&get_thread()
+#    define TM_ARG_ALONE		          &stm_current_tx()
 #    define SPECIAL_THREAD_ID()         thread_getId()
 #    define TM_ARGDECL                   TINYSTM_TX TM_ARG
 //#    define TM_ARGDECL                    STM_THREAD_T* TM_ARG
-#    define TM_ARGDECL_ALONE              STM_THREAD_T* TM_ARG_ALONE
+#    define TM_ARGDECL_ALONE              stm_tx* TM_ARG_ALONE
 #    define TM_THREAD_ENTER()         TM_ARGDECL_ALONE = STM_NEW_THREAD(); \
                                       STM_INIT_THREAD(TM_ARG_ALONE, SPECIAL_THREAD_ID());
 #endif

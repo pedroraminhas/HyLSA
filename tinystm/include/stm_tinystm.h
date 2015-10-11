@@ -111,6 +111,9 @@ extern "C" {
 #define HYBRID_STM_END()    stm_commit_tx(tinystm_Self)
 
 #define STM_RESTART()       stm_abort_tx(tinystm_Self,0)
+#define STM_NEW_THREAD()    stm_init_thread(); //TODO
+#define STM_INIT_THREAD(thread, buffer)   stm_start_tx(thread, buffer)
+
 
 /*
 * Orec Struct
@@ -378,6 +381,7 @@ void stm_exit(void) _CALLCONV;
  * thread calls any other functions of the library.
  */
 struct stm_tx *stm_init_thread(void) _CALLCONV;
+
 
 //@{
 /**
