@@ -35,31 +35,42 @@
 //#include "tl2.h"
 #include "stm_tinystm.h"
 
+/*  Struct o-set */
+
+struct o_sets{
+  stm_word_t *address;
+  struct o_sets* previous_o_set;
+  struct o_sets* next_o_set;  
+};    
+
+typedef struct o_sets o_set;
+
+
 # define AL_LOCK(b)
 # define PRINT_STATS()
 # define SETUP_NUMBER_TASKS(b)
 # define SETUP_NUMBER_THREADS(b)
 
 #ifdef REDUCED_TM_API
-#    define tinystm_Self                TM_ARG_ALONE
-#    define TM_ARG_ALONE                &stm_current_tx()
+#    define tinystm_Self                /*nothing*/
+#    define TM_ARG_ALONE                /*nothing*/
 #    define SPECIAL_THREAD_ID()         get_tid()
 #    define SPECIAL_INIT_THREAD(id)     thread_desc[id] = (void*)TM_ARG_ALONE;
 #    define TM_THREAD_ENTER()         Thread* inited_thread = STM_NEW_THREAD(); \
                                      STM_INIT_THREAD(inited_thread, SPECIAL_THREAD_ID()); \
                                      thread_desc[SPECIAL_THREAD_ID()] = (void*)inited_thread;
 #else
-//#    define TM_ARG_ALONE                  tinystm_Self
-#    define TM_ARG_ALONE		          &stm_current_tx()
+//#    define TM_ARG_ALONE                  /*nothing*/
+#    define TM_ARG_ALONE		            /*nothing*/
 #    define SPECIAL_THREAD_ID()         thread_getId()
-#    define TM_ARGDECL                   TINYSTM_TX TM_ARG
+#    define TM_ARGDECL                   /*nothing */
 //#    define TM_ARGDECL                    STM_THREAD_T* TM_ARG
 #    define TM_ARGDECL_ALONE              stm_tx* TM_ARG_ALONE
 #    define TM_THREAD_ENTER()         TM_ARGDECL_ALONE = STM_NEW_THREAD(); \
                                       STM_INIT_THREAD(TM_ARG_ALONE, SPECIAL_THREAD_ID());
 #endif
 #    define TM_CALLABLE                   /* nothing */
-#    define TM_ARG                        TM_ARG_ALONE,
+#    define TM_ARG                        /*nothing */
 #    define TM_THREAD_EXIT()          STM_FREE_THREAD(TM_ARG_ALONE)
 
 #      define TM_STARTUP(numThread, useless)     STM_STARTUP()
@@ -83,22 +94,21 @@
 # define SPEND_BUDGET(b)	if(RETRY_POLICY == 0) (*b)=0; else if (RETRY_POLICY == 2) (*b)=(*b)/2; else (*b)=--(*b);
 
 #    define TM_BEGIN_EXT(b,mode,ro) { \
-        unsigned int counter_stm_executions = 0; \
 		int tries = HTM_RETRIES;\
-        o_set* o_set_atribute; \
-        orec* orecs;  \
 		while (1) {   \
-			if (tries > 0) { \
-                if (mode == 0)  {   \
+		if (tries > 0) { \
                     TM_buff_type TM_buff; \
                     unsigned int status = __TM_begin(&TM_buff); \
                     if (status == _HTM_TBEGIN_STARTED) { \
+			         INIT_O_SET();   \
                         break;  \
                     }   \
-                    /*initialize the o-set*/   \
-                    tries--;    \
+		    else{ \
+                    	tries--;    \
+		    } \
                 }       \
-                if(mode == 1)   {   \
+                else  {   \
+			mode = 1; \
                     stm_init(); \
                 }   \
             }   \
@@ -107,7 +117,7 @@
 
 #    define TM_END()    \
         int commit_timestamp = 0;   \
-        o_set* o_set_pointer = o_set_atribute; \; \
+        o_set* o_set_pointer = o_set_atribute;  \
         orec* fetched_orec;   \
         if ((tries > 0) ) {    \
             if((o_set_atribute->previous_o_set != 0) && (o_set_atribute->next_o_set != 0))  {   \
@@ -133,13 +143,17 @@
         } \
         statistics_array[SPECIAL_THREAD_ID()].commits++; \
 };
-      
+  
 
-# define FETCH_OREC (addr)            ({     orec* ptr = orecs; \
-                                             ptr = ptr + addr;  \
-                                             ptr; }  )
+#define INIT_O_SET() ({   \
+  o_set* new_o_set;     \
+  new_o_set = malloc (sizeof(o_set));   \
+  new_o_set->address = 0;     \
+  new_o_set->previous_o_set=0;      \
+  new_o_set->next_o_set=0;      \
+  return new_o_set;     \
+})  \
 
-#      define MALLOC_OREC_STRUCT(ptr)       ({ptr = malloc(sizeof(orec));})
 
 
 #      define P_MALLOC(size)            malloc(size)
@@ -151,44 +165,47 @@
 #      define FAST_PATH_FREE(ptr)        free(ptr)
 #      define SLOW_PATH_FREE(ptr)
 
+# define GET_LOCK_ALIAS(var)    get_lock((void*)&var);
+# define NULL 0
+
 # define FAST_PATH_RESTART() __TM_abort();
-# define FAST_PATH_SHARED_READ(var) ({  orec* orec = fetch_orec(var,orecs);    \
-                                          if ((orec->locked) == 1)  \
-                                             { __TM_abort(); }  \
-                                               var;})
+# define FAST_PATH_SHARED_READ(var) ({   stm_word_t orec = GET_LOCK_ALIAS(var);   \
+                                          if (orec != NULL)  \
+                                             FAST_PATH_RESTART(); \
+                                              return var;})
 
 
 
-# define FAST_PATH_SHARED_READ_P(var) ({   orec* orec = fetch_orec(var,orecs);    \
-                                          if ((orec->locked) == 1)  \
-                                             { __TM_abort(); }  \
-                                               var;})
+# define FAST_PATH_SHARED_READ_P(var) ({   stm_word_t orec = GET_LOCK_ALIAS(var);   \
+                                          if (orec != NULL)  \
+                                             FAST_PATH_RESTART();  \
+                                              return var;})
 
-# define FAST_PATH_SHARED_READ_D(var) ({  orec* orec = fetch_orec(var,orecs);    \
-                                          if ((orec->locked) == 1)  \
-                                             { __TM_abort(); }  \
-                                               var;})
+# define FAST_PATH_SHARED_READ_D(var) ({   stm_word_t orec = GET_LOCK_ALIAS(var);   \
+                                          if (orec != NULL)  \
+                                             FAST_PATH_RESTART();  \
+                                              return var;})
 
 
-# define FAST_PATH_SHARED_WRITE(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
-                                                    if ((orec->locked) == 1) {  \
-                                                         __TM_abort(); \
+# define FAST_PATH_SHARED_WRITE(var, val) ({  stm_word_t orec = GET_LOCK_ALIAS(var); \   
+                                                    if (orec!= NULL) {  \
+                                                         FAST_PATH_RESTART(); \
                                                         }   \    
                                                         var;    \
                                                          var = val; \
                                                         o_set_atribute = add_to_o_set(o_set_atribute, var);}) 
 
-# define FAST_PATH_SHARED_WRITE_P(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
-                                                    if ((orec->locked) == 1) {  \
-                                                         __TM_abort(); \
+# define FAST_PATH_SHARED_WRITE_P(var, val) ({  stm_word_t orec = GET_LOCK_ALIAS(var); \   
+                                                    if (orec!= NULL) {  \
+                                                         FAST_PATH_RESTART(); \
                                                         }   \    
                                                         var;    \
                                                          var = val; \
                                                         o_set_atribute = add_to_o_set(o_set_atribute, var);}) 
 
-# define FAST_PATH_SHARED_WRITE_D(var, val) ({  orec* orec = fetch_orec(var,orecs); \   
-                                                    if ((orec->locked) == 1) {  \
-                                                         __TM_abort(); \
+# define FAST_PATH_SHARED_WRITE_D(var, val) ({  stm_word_t orec = GET_LOCK_ALIAS(var); \   
+                                                    if (orec!= NULL) {  \
+                                                         FAST_PATH_RESTART(); \
                                                         }   \    
                                                         var;    \
                                                          var = val; \

@@ -132,19 +132,19 @@ typedef struct orecs orec;
 * O-set Struct
 */
 
-struct o_sets{
-  unsigned long address;
+/*struct o_sets{
+  stm_word_t *address;
   struct o_sets* previous_o_set;
   struct o_sets* next_o_set;  
 };
 
-typedef struct o_sets o_set;
+typedef struct o_sets o_set; */
 
 /*  
 * Operations over orecs 
 */
 
-orec* add_orec(orec* orecs,unsigned long address,int locked, unsigned long owner) {
+/*orec* add_orec(orec* orecs,unsigned long address,int locked, unsigned long owner) {
   (orecs->next_orec) = malloc(sizeof(orec));
   orec* next_orec = orecs->next_orec;
   next_orec->address = address;
@@ -176,18 +176,6 @@ orec* fetch_orec (unsigned long address, orec* orecs ) {
   return null_orec;
 } 
 
-/*  
-* Operations over o-sets
-*/
-
-o_set* init_o_set(unsigned long address){
-  o_set* new_o_set;
-  new_o_set = malloc (sizeof(o_set));
-  new_o_set->address = address;
-  new_o_set->previous_o_set=0;
-  new_o_set->next_o_set=0;
-  return new_o_set;
-}
 
 o_set* add_to_o_set(o_set* o_set_param, unsigned long address){
   o_set* next_o_set;
@@ -198,7 +186,7 @@ o_set* add_to_o_set(o_set* o_set_param, unsigned long address){
   return next_o_set;
 }
 
-
+*/
 struct stm_tx;
 /**
  * Return the current transaction descriptor.
@@ -357,7 +345,7 @@ enum {
    */
   STM_ABORT_OTHER = (1 << 6) | (0x0F << 8)
 };
-
+  
 /* ################################################################### *
  * FUNCTIONS
  * ################################################################### */
@@ -791,6 +779,12 @@ stm_word_t stm_get_clock(void) _CALLCONV;
 int stm_set_irrevocable(int serial) _CALLCONV;
 int stm_set_irrevocable_tx(struct stm_tx *tx, int serial) _CALLCONV;
 //@}
+
+/*
+* get_lock function
+* Given an address it returns the lock that is protecting this location
+*/
+stm_word_t get_lock(volatile stm_word_t *addr) _CALLCONV;
 
 #ifdef __cplusplus
 }

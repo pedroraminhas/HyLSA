@@ -33,7 +33,6 @@
 #include <pthread.h>
 #include <string.h>
 #include <stm_tinystm.h>
-#include "tls.h"
 #include "utils.h"
 #include "atomic.h"
 #include "gc.h"

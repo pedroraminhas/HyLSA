@@ -1038,3 +1038,13 @@ stm_inc_clock(void)
 {
   FETCH_INC_CLOCK;
 }
+
+
+/*
+* Get the lock
+*/
+ stm_word_t  get_lock (volatile stm_word_t *addr){
+    stm_word_t  lock;
+    lock = ATOMIC_LOAD_ACQ(GET_LOCK(addr));
+    return lock;
+  }
