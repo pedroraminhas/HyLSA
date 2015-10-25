@@ -37,19 +37,14 @@
 
 /*  Struct o-set */
 
-struct o_sets{
-  stm_word_t *address;
-  struct o_sets* previous_o_set;
-  struct o_sets* next_o_set;  
-};    
-
-typedef struct o_sets o_set;
-
 
 # define AL_LOCK(b)
 # define PRINT_STATS()
 # define SETUP_NUMBER_TASKS(b)
 # define SETUP_NUMBER_THREADS(b)
+
+# define NULL_O_SET   1
+#define FIRST_O_SET   1
 
 #ifdef REDUCED_TM_API
 #    define tinystm_Self                /*nothing*/
@@ -94,65 +89,52 @@ typedef struct o_sets o_set;
 # define SPEND_BUDGET(b)	if(RETRY_POLICY == 0) (*b)=0; else if (RETRY_POLICY == 2) (*b)=(*b)/2; else (*b)=--(*b);
 
 #    define TM_BEGIN_EXT(b,mode,ro) { \
-		int tries = HTM_RETRIES;\
+    tries = HTM_RETRIES;\
 		while (1) {   \
-		if (tries > 0) { \
-                    TM_buff_type TM_buff; \
-                    unsigned int status = __TM_begin(&TM_buff); \
-                    if (status == _HTM_TBEGIN_STARTED) { \
-			         INIT_O_SET();   \
-                        break;  \
-                    }   \
-		    else{ \
-                    	tries--;    \
-		    } \
-                }       \
-                else  {   \
-			mode = 1; \
-                    stm_init(); \
-                }   \
-            }   \
-	}
+  		if (tries > 0) { \
+                      TM_buff_type TM_buff; \
+                      unsigned int status = __TM_begin(&TM_buff); \
+                      if (status == _HTM_TBEGIN_STARTED) { \
+  			                  o_set_pointer = init_o_set();   \
+                          break;  \
+                      }   \
+  		                else{ \
+                      	tries--;    \
+  		                } \
+       } else  {   \
+  			mode = 1; \
+        stm_init(); \
+        }   \
+    }   \
+  }
 
 
 #    define TM_END()    \
-        int commit_timestamp = 0;   \
-        o_set* o_set_pointer = o_set_atribute;  \
-        orec* fetched_orec;   \
+        stm_word_t commit_timestamp;   \
+        stm_word_t *orec;   \
         if ((tries > 0) ) {    \
-            if((o_set_atribute->previous_o_set != 0) && (o_set_atribute->next_o_set != 0))  {   \
-                commit_timestamp = __sync_add_and_fetch(&htm_clock.counter,1); \
-                while ( (o_set_pointer->previous_o_set != 0) ){ \
-                    fetched_orec = fetch_orec(orecs,(o_set_pointer->address));  \
-                    fetched_orec->locked=0; \
-                    o_set_pointer = (o_set_pointer->previous_o_set);    \
+            if(o_set_pointer->first_o_set != NULL_O_SET)  {   \
+                commit_timestamp = FETCH_INC_CLOCK; \ 
+                while (o_set_pointer->first_o_set != FIRST_O_SET){ \
+                    /*TO DO WRITE TO THE OREC */ \
                 }    \
-                fetched_orec = fetch_orec (orecs,(o_set_pointer->address)); \
-                fetched_orec->locked=0; \
             }    \
          __TM_end(); \
         } else {    \
-           commit_timestamp =  __sync_add_and_fetch(&htm_clock.counter,1);    \
-            int ret = HYBRID_STM_END();  \
-            commit_timestamp = __sync_sub_and_fetch(&htm_clock.counter,1);    \
-            if (ret == 0) { \
-                STM_RESTART(); \
-            } \
-            __sync_sub_and_fetch(&htm_clock.counter,1); \
-            statistics_array[SPECIAL_THREAD_ID()].aborts--; \
+           /*TO DO ELSE OF TRIES */
         } \
         statistics_array[SPECIAL_THREAD_ID()].commits++; \
 };
   
 
-#define INIT_O_SET() ({   \
+/*#define INIT_O_SET() ({   \
   o_set* new_o_set;     \
   new_o_set = malloc (sizeof(o_set));   \
   new_o_set->address = 0;     \
   new_o_set->previous_o_set=0;      \
   new_o_set->next_o_set=0;      \
   return new_o_set;     \
-})  \
+})  \*/
 
 
 
@@ -169,47 +151,47 @@ typedef struct o_sets o_set;
 # define NULL 0
 
 # define FAST_PATH_RESTART() __TM_abort();
-# define FAST_PATH_SHARED_READ(var) ({   stm_word_t orec = GET_LOCK_ALIAS(var);   \
+# define FAST_PATH_SHARED_READ(var) ({   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
                                           if (orec != NULL)  \
                                              FAST_PATH_RESTART(); \
                                               return var;})
 
 
 
-# define FAST_PATH_SHARED_READ_P(var) ({   stm_word_t orec = GET_LOCK_ALIAS(var);   \
+# define FAST_PATH_SHARED_READ_P(var) ({   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
                                           if (orec != NULL)  \
                                              FAST_PATH_RESTART();  \
                                               return var;})
 
-# define FAST_PATH_SHARED_READ_D(var) ({   stm_word_t orec = GET_LOCK_ALIAS(var);   \
+# define FAST_PATH_SHARED_READ_D(var) ({   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
                                           if (orec != NULL)  \
                                              FAST_PATH_RESTART();  \
                                               return var;})
 
 
-# define FAST_PATH_SHARED_WRITE(var, val) ({  stm_word_t orec = GET_LOCK_ALIAS(var); \   
+# define FAST_PATH_SHARED_WRITE(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
                                                     if (orec!= NULL) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
                                                         var;    \
                                                          var = val; \
-                                                        o_set_atribute = add_to_o_set(o_set_atribute, var);}) 
+                                                        o_set_pointer = add_to_o_set(o_set_pointer, var);}) 
 
-# define FAST_PATH_SHARED_WRITE_P(var, val) ({  stm_word_t orec = GET_LOCK_ALIAS(var); \   
+# define FAST_PATH_SHARED_WRITE_P(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
                                                     if (orec!= NULL) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
                                                         var;    \
                                                          var = val; \
-                                                        o_set_atribute = add_to_o_set(o_set_atribute, var);}) 
+                                                       o_set_pointer = add_to_o_set(o_set_pointer, var);}) 
 
-# define FAST_PATH_SHARED_WRITE_D(var, val) ({  stm_word_t orec = GET_LOCK_ALIAS(var); \   
+# define FAST_PATH_SHARED_WRITE_D(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
                                                     if (orec!= NULL) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
                                                         var;    \
                                                          var = val; \
-                                                        o_set_atribute = add_to_o_set(o_set_atribute, var);})    
+                                                        o_set_pointer = add_to_o_set(o_set_pointer, var);})    
 
 
 # define SLOW_PATH_RESTART() STM_RESTART();

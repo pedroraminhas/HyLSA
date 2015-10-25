@@ -12,6 +12,7 @@ typedef struct orecs orec;
 
 struct o_sets{
 	long address;
+	int first_o_set;
 	struct o_sets* previous_o_set;
 	struct o_sets* next_o_set;	
 };
@@ -24,6 +25,7 @@ o_set* init_o_set(long address){
 	new_o_set->address = address;
 	new_o_set->previous_o_set=0;
 	new_o_set->next_o_set=0;
+	new_o_set->first_o_set=1;
 	return new_o_set;
 }
 
@@ -74,11 +76,12 @@ int main()
 	//orecs = add_orec (orecs,888,0,2);
 	//orecs = add_orec (orecs,888,0,2);
 	printf("TESTE1\n");
+	o_set* abc = init_o_set(0);
 	o_set* o  = init_o_set(555);
 	printf("TESTE2\n");
 	if((o->previous_o_set == 0) && (o->next_o_set == 0))
 		printf("O-SET vazio\n");
-	printf("%ld \n", (o->previous_o_set)->address);
+	//printf("%ld \n", (o->previous_o_set)->address);
     printf("Hello World \n");
     return 0;
 }

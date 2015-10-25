@@ -14,6 +14,41 @@
 
 //extern __thread vwLock next_commit;
 
+/*
+* O-Set functions
+*/
+
+typedef uintptr_t stm_word_t;
+
+struct o_sets{
+  stm_word_t *address;
+  int first_o_set;
+  struct o_sets* previous_o_set;
+  struct o_sets* next_o_set;  
+}; 
+
+typedef struct o_sets o_set;
+
+o_set* init_o_set(){
+  o_set* new_o_set;
+  new_o_set = malloc (sizeof(o_set));
+  new_o_set->previous_o_set=0;
+  new_o_set->next_o_set=0;
+  new_o_set->first_o_set=1;
+  return new_o_set;
+}
+
+o_set* add_to_o_set(o_set* o_set_param, long address){
+  o_set* next_o_set;
+  (o_set_param->next_o_set) = malloc(sizeof(o_set));
+  next_o_set = (o_set_param->next_o_set);
+  next_o_set->address = address;
+  (next_o_set->previous_o_set) = o_set_param;
+  return next_o_set;
+}
+
+
+
 typedef struct padded_scalar {
     volatile unsigned long counter;
     char suffixPadding[CACHE_LINE_SIZE];
@@ -29,8 +64,9 @@ extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_statistics_t statistics_
 
 extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t htm_clock;
 
-//extern __attribute__((aligned(CACHE_LINE_SIZE))) padded_scalar_t orec;
+extern o_set* o_set_pointer;
 
+extern int tries;
 
 
 #ifndef REDUCED_TM_API

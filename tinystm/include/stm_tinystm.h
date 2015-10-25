@@ -113,80 +113,9 @@ extern "C" {
 #define STM_RESTART()       stm_abort_tx(tinystm_Self,0)
 #define STM_NEW_THREAD()    stm_init_thread(); //TODO
 #define STM_INIT_THREAD(thread, buffer)   stm_start_tx(thread, buffer)
+#define FETCH_INC_CLOCK                 (ATOMIC_FETCH_INC_FULL(&CLOCK))
 
 
-/*
-* Orec Struct
-*/
-struct orecs{
-  unsigned long address;
-  int locked;
-  unsigned long owner;
-  struct orecs* previous_orec;
-  struct orecs* next_orec;};
-
-typedef struct orecs orec;
-
-
-/*
-* O-set Struct
-*/
-
-/*struct o_sets{
-  stm_word_t *address;
-  struct o_sets* previous_o_set;
-  struct o_sets* next_o_set;  
-};
-
-typedef struct o_sets o_set; */
-
-/*  
-* Operations over orecs 
-*/
-
-/*orec* add_orec(orec* orecs,unsigned long address,int locked, unsigned long owner) {
-  (orecs->next_orec) = malloc(sizeof(orec));
-  orec* next_orec = orecs->next_orec;
-  next_orec->address = address;
-  next_orec->locked = locked;
-  next_orec->owner = owner;
-  next_orec->previous_orec = orecs;
-  return next_orec;
- }
-
-orec* init_orec(unsigned long address,int locked, unsigned long owner){
-  orec* new_orec = malloc (sizeof(orec));
-  new_orec->address = address;
-  new_orec->locked = locked;
-  new_orec->owner = owner;
-  new_orec->previous_orec = 0;
-  new_orec->next_orec= 0;
-  return new_orec;
-}
-
-orec* fetch_orec (unsigned long address, orec* orecs ) { 
-  while(orecs != 0){
-    if((orecs->address) == address){
-      printf("CHEGUEI\n");
-      return orecs;}
-    orecs = (orecs->previous_orec);
-  }
-  printf("NULL OREC\n");
-  orec* null_orec = init_orec(0,0,0);
-  return null_orec;
-} 
-
-
-o_set* add_to_o_set(o_set* o_set_param, unsigned long address){
-  o_set* next_o_set;
-  (o_set_param->next_o_set) = malloc(sizeof(o_set));
-  next_o_set = (o_set_param->next_o_set);
-  next_o_set->address = address;
-  (next_o_set->previous_o_set) = o_set_param;
-  return next_o_set;
-}
-
-*/
 struct stm_tx;
 /**
  * Return the current transaction descriptor.
@@ -784,7 +713,7 @@ int stm_set_irrevocable_tx(struct stm_tx *tx, int serial) _CALLCONV;
 * get_lock function
 * Given an address it returns the lock that is protecting this location
 */
-stm_word_t get_lock(volatile stm_word_t *addr) _CALLCONV;
+stm_word_t *get_lock(volatile stm_word_t *addr) _CALLCONV;
 
 #ifdef __cplusplus
 }
