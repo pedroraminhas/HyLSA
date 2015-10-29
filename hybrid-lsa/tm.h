@@ -32,10 +32,8 @@
 //#include <rtmintrin.h>
 #include <htmxlintrin.h>
 //#include "stm_internal.h"
-//#include "tl2.h"
 #include "stm_tinystm.h"
 
-/*  Struct o-set */
 
 
 # define AL_LOCK(b)
@@ -45,13 +43,15 @@
 
 # define NULL_O_SET   1
 #define FIRST_O_SET   1
+#define FETCH_INC_CLOCK()                 ({stm_inc_clock();  \
+                                            stm_get_clock(); })
 
 #ifdef REDUCED_TM_API
 #    define tinystm_Self                /*nothing*/
 #    define TM_ARG_ALONE                /*nothing*/
 #    define SPECIAL_THREAD_ID()         get_tid()
 #    define SPECIAL_INIT_THREAD(id)     thread_desc[id] = (void*)TM_ARG_ALONE;
-#    define TM_THREAD_ENTER()         Thread* inited_thread = STM_NEW_THREAD(); \
+#    define TM_THREAD_ENTER()        stm_init_thread()
                                      STM_INIT_THREAD(inited_thread, SPECIAL_THREAD_ID()); \
                                      thread_desc[SPECIAL_THREAD_ID()] = (void*)inited_thread;
 #else
@@ -60,27 +60,48 @@
 #    define SPECIAL_THREAD_ID()         thread_getId()
 #    define TM_ARGDECL                   /*nothing */
 //#    define TM_ARGDECL                    STM_THREAD_T* TM_ARG
-#    define TM_ARGDECL_ALONE              stm_tx* TM_ARG_ALONE
-#    define TM_THREAD_ENTER()         TM_ARGDECL_ALONE = STM_NEW_THREAD(); \
-                                      STM_INIT_THREAD(TM_ARG_ALONE, SPECIAL_THREAD_ID());
+#    define TM_ARGDECL_ALONE              struct stm_tx* TM_ARG_ALONE
+#    define TM_THREAD_ENTER()         stm_init_thread()
+
 #endif
 #    define TM_CALLABLE                   /* nothing */
 #    define TM_ARG                        /*nothing */
-#    define TM_THREAD_EXIT()          STM_FREE_THREAD(TM_ARG_ALONE)
+#    define TM_THREAD_EXIT()          stm_exit_thread()
 
-#      define TM_STARTUP(numThread, useless)     STM_STARTUP()
-#      define TM_SHUTDOWN() { \
-    STM_SHUTDOWN(); \
+#      include <mod_mem.h>
+#      include <mod_stats.h>
+
+
+#      define TM_STARTUP(numThread,useless)     if (sizeof(long) != sizeof(void *)) { \
+                                          fprintf(stderr, "Error: unsupported long and pointer sizes\n"); \
+                                          exit(1); \
+                                        } \
+                                        stm_init(); \
+                                        mod_mem_init(0); \
+                                        if (getenv("STM_STATS") != NULL) { \
+                                          mod_stats_init(); \
+                                        }
+
+#      define TM_SHUTDOWN()             \
+                                               if (getenv("STM_STATS") != NULL) { \
+                                          unsigned long u; \
+                                          if (stm_get_global_stats("global_nb_commits", &u) != 0) \
+                                            printf("#commits    : %lu\n", u); \
+                                          if (stm_get_global_stats("global_nb_aborts", &u) != 0) \
+                                            printf("#aborts     : %lu\n", u); \
+                                          if (stm_get_global_stats("global_max_retries", &u) != 0) \
+                                            printf("Max retries : %lu\n", u); \
+                                        } \
+                                        stm_exit(); \
     unsigned long commits = 0; \
     unsigned long aborts = 0; \
-    int i = 0; \
-    for (; i < 128; i++) { \
-       if (statistics_array[i].commits == 0) { break; } \
-       commits += statistics_array[i].commits; \
-       aborts += statistics_array[i].aborts; \
+    int ik = 0; \
+    for (; ik < 128; ik++) { \
+       if (statistics_array[ik].commits == 0) { break; } \
+       commits += statistics_array[ik].commits; \
+       aborts += statistics_array[ik].aborts; \
     } \
     printf("Total commits: %lu\nTotal aborts: %lu\n", commits, aborts); \
-}
 
 #  define TM_BEGIN_WAIVER()
 #  define TM_END_WAIVER()
@@ -106,7 +127,7 @@
         stm_init(); \
         }   \
     }   \
-  }
+  
 
 
 #    define TM_END()    \
@@ -114,29 +135,18 @@
         stm_word_t *orec;   \
         if ((tries > 0) ) {    \
             if(o_set_pointer->first_o_set != NULL_O_SET)  {   \
-                commit_timestamp = FETCH_INC_CLOCK; \ 
+                commit_timestamp = FETCH_INC_CLOCK(); \ 
                 while (o_set_pointer->first_o_set != FIRST_O_SET){ \
                     /*TO DO WRITE TO THE OREC */ \
                 }    \
             }    \
          __TM_end(); \
         } else {    \
-           /*TO DO ELSE OF TRIES */
+           /*TO DO ELSE OF TRIES */ \
         } \
         statistics_array[SPECIAL_THREAD_ID()].commits++; \
 };
   
-
-/*#define INIT_O_SET() ({   \
-  o_set* new_o_set;     \
-  new_o_set = malloc (sizeof(o_set));   \
-  new_o_set->address = 0;     \
-  new_o_set->previous_o_set=0;      \
-  new_o_set->next_o_set=0;      \
-  return new_o_set;     \
-})  \*/
-
-
 
 #      define P_MALLOC(size)            malloc(size)
 #      define P_FREE(ptr)               free(ptr)
@@ -151,29 +161,27 @@
 # define NULL 0
 
 # define FAST_PATH_RESTART() __TM_abort();
-# define FAST_PATH_SHARED_READ(var) ({   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
+
+inline intptr_t hytm_TxLoad(intptr_t* var);
+inline intptr_t hytm_TxLoad(intptr_t* var){
+                                          __TM_suspend(); \
+                                         stm_word_t *orec = GET_LOCK_ALIAS(var);   \
                                           if (orec != NULL)  \
                                              FAST_PATH_RESTART(); \
-                                              return var;})
+                                           __TM_resume();  \
+                                              return *var;}
 
+# define FAST_PATH_SHARED_READ(var) hytm_TxLoad((stm_word_t*)(void*)&(var))
 
+# define FAST_PATH_SHARED_READ_P(var) hytm_TxLoad((stm_word_t*)(void*)&(var))
 
-# define FAST_PATH_SHARED_READ_P(var) ({   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
-                                          if (orec != NULL)  \
-                                             FAST_PATH_RESTART();  \
-                                              return var;})
-
-# define FAST_PATH_SHARED_READ_D(var) ({   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
-                                          if (orec != NULL)  \
-                                             FAST_PATH_RESTART();  \
-                                              return var;})
+# define FAST_PATH_SHARED_READ_D(var) hytm_TxLoad((stm_word_t*)(void*)&(var))
 
 
 # define FAST_PATH_SHARED_WRITE(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
                                                     if (orec!= NULL) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
-                                                        var;    \
                                                          var = val; \
                                                         o_set_pointer = add_to_o_set(o_set_pointer, var);}) 
 
@@ -181,7 +189,6 @@
                                                     if (orec!= NULL) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
-                                                        var;    \
                                                          var = val; \
                                                        o_set_pointer = add_to_o_set(o_set_pointer, var);}) 
 
@@ -189,7 +196,6 @@
                                                     if (orec!= NULL) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
-                                                        var;    \
                                                          var = val; \
                                                         o_set_pointer = add_to_o_set(o_set_pointer, var);})    
 

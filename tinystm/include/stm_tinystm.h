@@ -113,7 +113,7 @@ extern "C" {
 #define STM_RESTART()       stm_abort_tx(tinystm_Self,0)
 #define STM_NEW_THREAD()    stm_init_thread(); //TODO
 #define STM_INIT_THREAD(thread, buffer)   stm_start_tx(thread, buffer)
-#define FETCH_INC_CLOCK                 (ATOMIC_FETCH_INC_FULL(&CLOCK))
+
 
 
 struct stm_tx;
@@ -715,8 +715,13 @@ int stm_set_irrevocable_tx(struct stm_tx *tx, int serial) _CALLCONV;
 */
 stm_word_t *get_lock(volatile stm_word_t *addr) _CALLCONV;
 
+/*
+* stm_inc_clock function 
+* Returns the clock
+*/
+void stm_inc_clock(void) _CALLCONV;
+
 #ifdef __cplusplus
 }
 #endif
-
 #endif /* _STM_H_ */
