@@ -114,6 +114,12 @@ extern "C" {
 #define STM_NEW_THREAD()    stm_init_thread(); //TODO
 #define STM_INIT_THREAD(thread, buffer)   stm_start_tx(thread, buffer)
 
+# define WRITE_MASK                     0x01                /* 1 bit */
+# define READ_MASK                      0x02                /* 1 bit */
+# define OWNED_MASK                     (WRITE_MASK | READ_MASK)
+
+#define IS_LOCKED(l)     (LOCK_GET_OWNED(l))
+
 
 
 struct stm_tx;
@@ -720,6 +726,11 @@ stm_word_t *get_lock(volatile stm_word_t *addr) _CALLCONV;
 * Returns the clock
 */
 void stm_inc_clock(void) _CALLCONV;
+
+
+int is_locked(stm_word_t* l) _CALLCONV;
+
+void atomic_store_rel(stm_word_t* orec, stm_word_t commit_timestamp) _CALLCONV;
 
 #ifdef __cplusplus
 }

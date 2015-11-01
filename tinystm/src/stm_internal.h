@@ -1914,5 +1914,9 @@ int_stm_get_specific(stm_tx_t *tx, int key)
   return (void *)ATOMIC_LOAD(&tx->data[key]);
 }
 
+static INLINE int
+is_locked(stm_word_t* l){
+  return LOCK_GET_OWNED(l);
+}
 #endif /* _STM_INTERNAL_H_ */
 

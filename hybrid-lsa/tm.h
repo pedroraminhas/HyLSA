@@ -109,6 +109,7 @@
 # define TM_BEGIN(b,mode)     TM_BEGIN_EXT(b,mode,0)
 # define SPEND_BUDGET(b)	if(RETRY_POLICY == 0) (*b)=0; else if (RETRY_POLICY == 2) (*b)=(*b)/2; else (*b)=--(*b);
 
+
 #    define TM_BEGIN_EXT(b,mode,ro) { \
     tries = HTM_RETRIES;\
 		while (1) {   \
@@ -124,7 +125,13 @@
   		                } \
        } else  {   \
   			mode = 1; \
-        stm_init(); \
+        sigjmp_buf buf; \
+        sigsetjmp(buf, 0); \
+        stm_tx_attr_t _a = {}; \
+        _a.read_only = ro; \
+        stm_start(_a, &buf); \
+        sigsetjmp(buf, 0); \
+        statistics_array[SPECIAL_THREAD_ID()].aborts++; \
         }   \
     }   \
   
@@ -135,14 +142,20 @@
         stm_word_t *orec;   \
         if ((tries > 0) ) {    \
             if(o_set_pointer->first_o_set != NULL_O_SET)  {   \
+                __TM_suspend();   \
                 commit_timestamp = FETCH_INC_CLOCK(); \ 
+                __TM_resume();  \
                 while (o_set_pointer->first_o_set != FIRST_O_SET){ \
-                    /*TO DO WRITE TO THE OREC */ \
+                    stm_word_t *orec = GET_LOCK_ALIAS(o_set_pointer->address);  \
+                    atomic_store_rel(orec,commit_timestamp); \
+                    o_set_pointer=(o_set_pointer->previous_o_set); \
                 }    \
             }    \
          __TM_end(); \
         } else {    \
-           /*TO DO ELSE OF TRIES */ \
+           stm_commit(); \
+           statistics_array[SPECIAL_THREAD_ID()].aborts--; \
+           statistics_array[SPECIAL_THREAD_ID()].commits++;  \
         } \
         statistics_array[SPECIAL_THREAD_ID()].commits++; \
 };
@@ -159,17 +172,22 @@
 
 # define GET_LOCK_ALIAS(var)    get_lock((void*)&var);
 # define NULL 0
+# define IS_LOCKED(l)         is_locked(l)
 
 # define FAST_PATH_RESTART() __TM_abort();
 
+
+#  include <wrappers.h>
+
+
 inline intptr_t hytm_TxLoad(intptr_t* var);
-inline intptr_t hytm_TxLoad(intptr_t* var){
-                                          __TM_suspend(); \
-                                         stm_word_t *orec = GET_LOCK_ALIAS(var);   \
-                                          if (orec != NULL)  \
-                                             FAST_PATH_RESTART(); \
-                                           __TM_resume();  \
-                                              return *var;}
+inline intptr_t hytm_TxLoad(intptr_t* var){   stm_word_t *orec = GET_LOCK_ALIAS(var);   \
+                                              if (IS_LOCKED(orec))  \
+                                                  FAST_PATH_RESTART(); \
+                                              __TM_suspend(); \
+                                             int temp = *var;
+                                              __TM_resume();  \
+                                              return temp;}
 
 # define FAST_PATH_SHARED_READ(var) hytm_TxLoad((stm_word_t*)(void*)&(var))
 
@@ -179,21 +197,21 @@ inline intptr_t hytm_TxLoad(intptr_t* var){
 
 
 # define FAST_PATH_SHARED_WRITE(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
-                                                    if (orec!= NULL) {  \
+                                                    if (IS_LOCKED(orec)) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
                                                          var = val; \
                                                         o_set_pointer = add_to_o_set(o_set_pointer, var);}) 
 
 # define FAST_PATH_SHARED_WRITE_P(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
-                                                    if (orec!= NULL) {  \
+                                                    if (IS_LOCKED(orec)) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
                                                          var = val; \
                                                        o_set_pointer = add_to_o_set(o_set_pointer, var);}) 
 
 # define FAST_PATH_SHARED_WRITE_D(var, val) ({  stm_word_t *orec = GET_LOCK_ALIAS(var); \   
-                                                    if (orec!= NULL) {  \
+                                                    if (IS_LOCKED(orec)) {  \
                                                          FAST_PATH_RESTART(); \
                                                         }   \    
                                                          var = val; \
@@ -201,10 +219,10 @@ inline intptr_t hytm_TxLoad(intptr_t* var){
 
 
 # define SLOW_PATH_RESTART() STM_RESTART();
-# define SLOW_PATH_SHARED_READ(var)           stm_load((void*)&(var))
-# define SLOW_PATH_SHARED_READ_P(var)         stm_load((void*)&(var))
-# define SLOW_PATH_SHARED_READ_F(var)         stm_load((void*)&(var))
-# define SLOW_PATH_SHARED_READ_D(var)         stm_load((void*)&(var))
+# define SLOW_PATH_SHARED_READ(var)           stm_load((volatile stm_word_t *)(void *)&(var))
+# define SLOW_PATH_SHARED_READ_P(var)         stm_load_ptr((volatile void **)(void *)&(var))
+# define SLOW_PATH_SHARED_READ_F(var)         stm_load_float((volatile float *)(void *)&(var))
+# define SLOW_PATH_SHARED_READ_D(var)         stm_load_double((volatile double *)(void *)&(var))
 # define SLOW_PATH_SHARED_WRITE(var, val)     stm_store((void*)&(var), val)
 # define SLOW_PATH_SHARED_WRITE_P(var, val)   stm_store((void*)&(var), val)
 # define SLOW_PATH_SHARED_WRITE_D(var, val)   stm_store((void*)&(var), val)

@@ -942,5 +942,9 @@ stm_wbetl_commit(stm_tx_t *tx)
   return 1;
 }
 
+void atomic_store_rel(stm_word_t* orec, stm_word_t commit_timestamp){
+  ATOMIC_STORE_REL(orec,commit_timestamp);
+}
+
 #endif /* _STM_WBETL_H_ */
 
